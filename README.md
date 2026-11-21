@@ -1,10 +1,10 @@
 # Airline Booking Doctor
 
-Jednoekranowy dashboard Angular do demonstracji współpracy człowieka i agenta w przeglądarce ChatGPT. Użytkownik wskazuje całą kartę wykresu przez natywną adnotację. Agent może odczytać dzienne kohorty, porównać lejek i wdrożenia oraz ustawić filtry we wspólnym widoku. Wszystkie dane są fikcyjne i oznaczone w aplikacji jako **Synthetic demo data**.
+A single-page Angular dashboard that demonstrates how people and browser agents can work together in ChatGPT. A user annotates a chart card, and an agent can inspect daily cohorts, compare funnel stages and deployments, and update filters in the shared dashboard view. All data is synthetic and labeled **Synthetic demo data** in the app.
 
-## Uruchomienie
+## Getting started
 
-Projekt został zbudowany z Angular i Angular CLI **22.3.0**, TypeScript **6.0.3** oraz Vitest **5.1.1**. Wersje są zapisane w `package-lock.json`. Testowane środowisko to Node.js **22.22.3** i npm **10.9.8**.
+The project uses Angular and Angular CLI **22.3.0**, TypeScript **6.0.3**, and Vitest **5.1.1**, as pinned in `package-lock.json`. The development environment used Node.js **22.22.3** and npm **10.9.8**.
 
 ```sh
 npm ci
@@ -15,54 +15,54 @@ npm test
 npm run build
 ```
 
-Dashboard działa pod [http://localhost:4200](http://localhost:4200/). Build statyczny trafia do `dist/airline-booking-doctor/browser/`. Dane są pakowane z lokalnych plików JSON. Aplikacja działa bez backendu i klucza API.
+Open [http://localhost:4200](http://localhost:4200/). The production build is written to `dist/airline-booking-doctor/browser/`. Demo data is loaded from local JSON files. The app requires neither a backend nor an API key.
 
-## Architektura frontendu
+## Frontend architecture
 
-Kod Angulara, zasoby publiczne i arkusz stylów są w `src/frontend`. Główny komponent składa nagłówek i `RouterOutlet`. Trasa `/` korzysta z publicznego eksportu feature’u `booking-dashboard`. Reguły routingu aplikacji są w `app/core/routing`, a konfiguracja tras w `app.routes.ts`.
+Angular source code, public assets, and styles live directly in `src/`. The root component renders the page header and `RouterOutlet`. The `/` route loads the `booking-dashboard` feature through its public API. App routing helpers live in `app/core/routing`, and route configuration lives in `app.routes.ts`.
 
-Dashboard jest jednym feature’em. `BookingDashboardPage` odczytuje sygnały stanu, a akcje przekazuje do `DashboardFacade`. Strona i handlery WebMCP działają na tej samej instancji `DashboardStore`, tworzonej dla strony z danymi dostarczonymi przez repozytorium.
+The dashboard is implemented as a single feature. `BookingDashboardPage` reads state signals and delegates actions to `DashboardFacade`. The page and WebMCP handlers share the same page-scoped `DashboardStore`, initialized with data from the repository.
 
-| Warstwa       | Odpowiedzialność                                                                    |
-| ------------- | ----------------------------------------------------------------------------------- |
-| `domain`      | Typy, walidacja, agregacja kohort i obliczanie konwersji w czystych funkcjach.      |
-| `state`       | Sygnały, dane pochodne, dziennik i synchroniczne, wersjonowane aktualizacje widoku. |
-| `data-access` | Walidacja i ładowanie JSON, definicje narzędzi oraz adaptery API przeglądarki.      |
-| `ui`          | Komponent wykresu oraz formatowanie liczb i dat na potrzeby prezentacji.            |
-| `feature`     | Strona routowana, kompozycja dostawców, obsługa akcji i cykl życia integracji.      |
+| Layer | Responsibility |
+| --- | --- |
+| `domain` | Types, validation, cohort aggregation, and conversion calculations as pure functions. |
+| `state` | Signals, derived data, activity log, and synchronous versioned view updates. |
+| `data-access` | JSON loading and validation, tool definitions, and browser API adapters. |
+| `ui` | Chart component and number/date formatting for presentation. |
+| `feature` | Routed page, provider composition, action handling, and integration lifecycle. |
 
-Importy między warstwami używają aliasów TypeScript. ESLint egzekwuje granice także dla importów względnych, a `npm run check:boundaries` sprawdza przykładowe dozwolone i zabronione zależności. Tailwind CSS v4 działa przez PostCSS, a globalny `src/frontend/styles.css` zawiera wspólną bazę i style dashboardu.
+TypeScript path aliases are used for imports between layers. ESLint enforces boundaries for both aliases and relative imports, while `npm run check:boundaries` checks allowed and forbidden dependency examples. Tailwind CSS v4 runs through PostCSS. The global `src/styles.css` contains shared base styles and dashboard styles.
 
-## Demonstracja w 3–5 minut
+## Five-minute demo
 
-1. W trybie Work lub Codex w desktopowym ChatGPT otwórz adres w jego wbudowanej przeglądarce. Użyj obsługiwanego modelu. Jeśli integracje są wyłączone, sprawdź uprawnienia witryny oraz ustawienia **Enable site tools** i **Annotation features**. Hostowany wariant wymaga HTTPS. [Site tools](https://learn.chatgpt.com/docs/webmcp) · [Annotations Extensibility](https://learn.chatgpt.com/docs/annotations-extensibility)
-2. Rozwiń **Integration diagnostics**. W przeglądarce z obsługą obu integracji panel pokazuje dwa statusy `available` oraz `3 registered`. W widoku początkowym **All traffic**, 3–20 XI, wskaż spadek dziennej konwersji z 4,0% do 3,4%.
-3. Zaznacz całą kartę **Booking conversion** w trybie adnotacji lub kliknij **Ask about this chart**. Wpisz poniższy komentarz w natywnym edytorze i wyślij go do ChatGPT.
+1. In ChatGPT desktop Work or Codex, open the dashboard in its built-in browser and use a supported model. If integrations are disabled, check the site permissions and the **Enable site tools** and **Annotation features** settings. A hosted version requires HTTPS. See [Site tools](https://learn.chatgpt.com/docs/webmcp) and [Annotations Extensibility](https://learn.chatgpt.com/docs/annotations-extensibility).
+2. Expand **Integration diagnostics**. In a browser that supports both integrations, the panel shows two `available` statuses and `3 registered` tools. On the initial **All traffic** view for November 3–20, point out the daily conversion drop from 4.0% to 3.4%.
+3. Annotate the full **Booking conversion** card or click **Ask about this chart**. Enter the following comment in the native annotation editor and send it to ChatGPT:
 
    > Investigate the conversion drop from November 12. Compare it with the preceding period, identify the affected segment and funnel steps, inspect nearby deployments, and show me the affected segment in this dashboard. Distinguish evidence from hypotheses.
 
-4. Rozwiń **Activity**, żeby pokazać faktyczne wywołania i ich wyniki. W oczekiwanym widoku agent wybiera **Mobile · Safari**, zachowuje 3–20 XI, żeby pokazać oba okresy na jednym wykresie, i wyróżnia **Fare selector v2**. Kolejność odczytów może zależeć od modelu.
-5. Przełącz na **Desktop · Chrome**. Linia utrzymuje się na poziomie 4,0%. **Reset demo** przywraca daty, segment i wyróżnienie oraz czyści lokalne **Activity**. Zmiana stanu zwiększa jego wersję.
+4. Expand **Activity** to show actual tool calls and results. In the expected view, the agent selects **Mobile · Safari**, keeps the November 3–20 date range so both periods remain visible on one chart, and highlights **Fare selector v2**. The order of read calls can vary by model.
+5. Switch to **Desktop · Chrome** to see that conversion stays at 4.0%. **Reset demo** restores the dates, segment, and highlight, and clears the local **Activity** log. Every state change increments the view version.
 
-### Wynik kontrolny
+### Expected result
 
-Porównujemy 3–11 XI z 12–20 XI. W każdym oknie jest po 90 000 sesji. Liczba zakupów spada z 3600 do 3060, a konwersja z 4,0% do 3,4% (−0,6 pp, względnie −15%). Cała różnica 540 zakupów przypada na Mobile Safari. W tym segmencie konwersja spada z 4,0% do 1,0%, przejście **Results viewed → Fare selected** z 50% do 25%, a **Checkout started → Purchase completed** z 40% do 20%. **Fare selector v2** wdrożono w dniu spadku. Dzienne kohorty nie ustalają kolejności zdarzeń w ciągu dnia i nie pozwalają przypisać wdrożeniu przyczynowości.
+Compare November 3–11 with November 12–20. Each period has 90,000 sessions. Bookings fall from 3,600 to 3,060, and conversion falls from 4.0% to 3.4% (−0.6 percentage points, or −15% relative). Mobile Safari accounts for all 540 fewer bookings. In that segment, conversion falls from 4.0% to 1.0%; **Results viewed → Fare selected** falls from 50% to 25%, and **Checkout started → Purchase completed** falls from 40% to 20%. **Fare selector v2** shipped on the day of the drop. Daily cohorts do not establish event ordering within a day and cannot prove that the deployment caused the change.
 
-## Integracje
+## Integrations
 
-| Narzędzie               | Działanie                                                                                                                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `query_booking_metrics` | Zwraca liczniki, proporcje, dzienny szereg, etapy lejka i cztery segmenty, opcjonalnie w porównaniu z równym wcześniejszym oknem. Zwraca też niezależny stan bieżącego widoku. |
-| `get_deployments`       | Odczytuje chronologiczną historię wdrożeń według dni UTC.                                                                                                                      |
-| `set_dashboard_view`    | Ustawia daty, segment i opcjonalne wyróżnienie w jednej operacji. Wymaga aktualnego `expectedStateVersion`.                                                                    |
+| Tool | Behavior |
+| --- | --- |
+| `query_booking_metrics` | Returns counts, ratios, daily series, funnel stages, and four traffic segments, optionally compared with an equal-length earlier window. Also returns the independent current view state. |
+| `get_deployments` | Reads chronological deployment history in UTC by day. |
+| `set_dashboard_view` | Updates dates, segment, and optional highlight in one operation. Requires the current `expectedStateVersion`. |
 
-Karty `booking-conversion-chart` oraz `booking-funnel-chart` udostępniają po sześć pól w `oai-annotation-metadata`. Metadane określają stan karty w chwili wskazania. Przed aktualizacją filtrów agent odczytuje `currentView`. W razie `STALE_VIEW` może ponownie odczytać widok i uwzględnić nowsze wybory użytkownika.
+The `booking-conversion-chart` and `booking-funnel-chart` cards each expose six fields through `oai-annotation-metadata`. Metadata describes the card state when it was selected. Before changing filters, the agent reads `currentView`. On `STALE_VIEW`, it can read the view again and account for newer user selections.
 
-Narzędzia deklaruje eksperymentalne API Angulara `declareExperimentalWebMcpTool`. Angular wyrejestrowuje narzędzia po zniszczeniu injectora przypisanego do montażu dashboardu. Operacje trafiają do lokalnego dziennika w pamięci, a komentarzem zarządza host. [Specyfikacja WebMCP](https://webmachinelearning.github.io/webmcp/)
+Tools are declared with Angular's experimental `declareExperimentalWebMcpTool` API. Angular unregisters them when the injector scoped to the dashboard mount is destroyed. Tool calls are logged locally in memory; the host manages annotation comments. See the [WebMCP specification](https://webmachinelearning.github.io/webmcp/).
 
-## Weryfikacja
+## Verification
 
-- **Automatycznie.** Testy Vitest obejmują walidację 80 kohort, wyniki agregacji i obu spadków w lejku, pełny baseline, atomowość i wersjonowanie stanu oraz wyrenderowane metadane i reset. Testy adaptera z atrapą hosta sprawdzają schematy wykonania i wyrejestrowanie.
-- **Wbudowana przeglądarka ChatGPT.** Odkryto i wywołano trzy rzeczywiste narzędzia na localhost. Odczyty zachowały wersję widoku. Zapis przełączył wszystkie karty na Mobile Safari i wyróżnił Fare selector v2. Próba zapisu ze starą wersją zwróciła `STALE_VIEW`. Panel **Activity** pokazał wykonane wywołania. Sprawdzono zmianę okresu, obsługę klawiatury, reset i układ przy szerokości 375 px.
-- **Adnotacje w hoście.** Potwierdzono dostępność `document.oai.annotation.request`, przyjęcie żądania z przycisku i odświeżanie sześciu pól karty po zmianie widoku. Natywny edytor był poza dostępem automatyzacji. Ręczny test obejmuje zaznaczenie obu kart, anulowanie, wysłanie komentarza z metadanymi i odpowiedź modelu w rozmowie.
-- **Chrome.** Dashboard i filtry działały bez API adnotacji. Przycisk był ukryty, a konsola nie zarejestrowała ostrzeżeń ani błędów. Ta instancja Chrome udostępniała WebMCP. Test komponentu sprawdza również renderowanie przy braku obu API.
+- **Automated.** Vitest covers validation of 80 cohorts, aggregation results and both funnel drops, complete baselines, state atomicity and versioning, rendered metadata, and reset behavior. Adapter tests use a host stub to check execution schemas and unregistration.
+- **ChatGPT built-in browser.** Three live tools were discovered and called on localhost. Reads preserved the view version. A write changed all cards to Mobile Safari and highlighted Fare selector v2. A write using an older version returned `STALE_VIEW`. The **Activity** panel showed executed calls. Date range changes, keyboard behavior, reset, and a 375 px layout were also checked.
+- **Host annotations.** `document.oai.annotation.request` was available; the chart button accepted a request, and all six metadata fields refreshed after a view change. The native editor was outside automation access. Manual verification should cover selecting either card, canceling, sending an annotated comment, and receiving a model response in the conversation.
+- **Chrome.** The dashboard and filters worked without the annotation API. The annotation button was hidden, and the console showed no warnings or errors. The tested Chrome instance exposed WebMCP. A component test also checks rendering when both APIs are unavailable.

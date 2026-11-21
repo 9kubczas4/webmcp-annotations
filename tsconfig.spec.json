@@ -5,5 +5,5 @@
   "compilerOptions": {
     "types": ["vitest/globals"]
   },
-  "include": ["src/frontend/**/*.d.ts", "src/frontend/**/*.spec.ts"]
+  "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
 }

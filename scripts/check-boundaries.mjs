@@ -1,6 +1,6 @@
 import { ESLint } from 'eslint';
 
-const app = 'src/frontend/app';
+const app = 'src/app';
 const dashboard = `${app}/features/booking-dashboard`;
 const cases = [
   [

@@ -8,7 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false",
     "test:watch": "ng test --watch",
-    "lint": "eslint src/frontend",
+    "lint": "eslint src",
     "check:boundaries": "node scripts/check-boundaries.mjs"
   },
   "private": true,

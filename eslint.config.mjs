@@ -16,31 +16,31 @@ const internalDependencies = {
 export default [
   ...tseslint.configs.recommended,
   {
-    files: ['src/frontend/**/*.ts'],
+    files: ['src/**/*.ts'],
     plugins: { boundaries },
     settings: {
       'import/resolver': { typescript: { project: './tsconfig.json' } },
       'boundaries/elements': [
         {
           type: 'feature-layer',
-          pattern: 'src/frontend/app/features/*/{domain,state,data-access,ui,feature}/**',
+          pattern: 'src/app/features/*/{domain,state,data-access,ui,feature}/**',
           capture: ['feature', 'layer'],
           partialMatch: false,
         },
         {
           type: 'feature-root',
-          pattern: 'src/frontend/app/features/*/**',
+          pattern: 'src/app/features/*/**',
           capture: ['feature'],
           partialMatch: false,
         },
-        { type: 'core-routing', pattern: 'src/frontend/app/core/routing/**', partialMatch: false },
-        { type: 'core', pattern: 'src/frontend/app/core/**', partialMatch: false },
-        { type: 'shared', pattern: 'src/frontend/app/shared/**', partialMatch: false },
-        { type: 'frontend', pattern: 'src/frontend/**', partialMatch: false },
+        { type: 'core-routing', pattern: 'src/app/core/routing/**', partialMatch: false },
+        { type: 'core', pattern: 'src/app/core/**', partialMatch: false },
+        { type: 'shared', pattern: 'src/app/shared/**', partialMatch: false },
+        { type: 'frontend', pattern: 'src/**', partialMatch: false },
       ],
       'boundaries/files': [
         {
-          pattern: 'src/frontend/app/features/*/index.ts',
+          pattern: 'src/app/features/*/index.ts',
           category: 'feature-api',
           capture: ['feature'],
         },
@@ -113,7 +113,7 @@ export default [
     },
   },
   {
-    files: ['src/frontend/app/features/*/{domain,state}/**/*.ts'],
+    files: ['src/app/features/*/{domain,state}/**/*.ts'],
     rules: {
       'no-restricted-globals': [
         'error',
@@ -127,7 +127,7 @@ export default [
     },
   },
   {
-    files: ['src/frontend/app/features/*/state/**/*.ts'],
+    files: ['src/app/features/*/state/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
