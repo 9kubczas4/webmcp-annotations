@@ -1,0 +1,135 @@
+<div #plot class="plot" (pointerleave)="hovered.set(null)">
+  <svg
+    [attr.viewBox]="viewBox()"
+    aria-label="Daily booking conversion with deployment markers"
+    role="group"
+  >
+    <defs>
+      <linearGradient
+        id="conversion-fill"
+        x1="0"
+        y1="0"
+        x2="0"
+        y2="1"
+        gradientUnits="objectBoundingBox"
+      >
+        <stop offset="0%" stop-color="#dfeaff" stop-opacity=".95" />
+        <stop offset="100%" stop-color="#f4f8ff" stop-opacity=".58" />
+      </linearGradient>
+    </defs>
+    @for (tick of ticks(); track tick.label) {
+      <line
+        class="gridline"
+        [attr.x1]="left"
+        [attr.x2]="right()"
+        [attr.y1]="tick.y"
+        [attr.y2]="tick.y"
+      />
+      <text class="axis" [attr.x]="left - 12" [attr.y]="tick.y + 4" text-anchor="end">
+        {{ tick.label }}
+      </text>
+    }
+    @for (path of paths(); track $index) {
+      <path [attr.d]="path.fill" fill="url(#conversion-fill)" />
+    }
+    @for (marker of markers(); track marker.id) {
+      <g class="marker" [class.highlighted]="marker.id === highlightedId()">
+        <title>
+          {{ date(marker.deployedAt) }} · {{ marker.title
+          }}{{ marker.id === highlightedId() ? ' (highlighted)' : '' }}
+        </title>
+        <line [attr.x1]="marker.x" [attr.x2]="marker.x" [attr.y1]="top" [attr.y2]="bottom" />
+        <rect
+          [attr.x]="marker.x - 4"
+          [attr.y]="top - 4"
+          width="8"
+          height="8"
+          [attr.transform]="'rotate(45 ' + marker.x + ' ' + top + ')'"
+          rx="1"
+        />
+        @if (marker.id === highlightedId()) {
+          <circle [attr.cx]="marker.x" [attr.cy]="top" r="9" fill="none" />
+        }
+      </g>
+    }
+    @for (path of paths(); track $index) {
+      <path class="series" [attr.d]="path.line" />
+    }
+    @for (point of points(); track point.date) {
+      @if (point.y !== null) {
+        <circle
+          class="dot"
+          [class.active]="active()?.date === point.date"
+          [attr.cx]="point.x"
+          [attr.cy]="point.y"
+          r="3.2"
+          aria-hidden="true"
+        />
+        <circle
+          class="point-target"
+          [attr.cx]="point.x"
+          [attr.cy]="point.y"
+          r="9"
+          tabindex="0"
+          role="img"
+          [attr.aria-label]="
+            date(point.date) +
+            ', ' +
+            percent(point.bookingConversion) +
+            ', ' +
+            count(point.purchaseCompleted) +
+            ' bookings in ' +
+            count(point.search) +
+            ' searches'
+          "
+          (pointerenter)="hovered.set(point.date)"
+          (pointerleave)="hovered.set(null)"
+          (focus)="focused.set(point.date)"
+          (blur)="focused.set(null)"
+        />
+      }
+    }
+    @for (point of labels(); track point.date) {
+      <text class="axis" [attr.x]="point.x" [attr.y]="bottom + 25" text-anchor="middle">
+        {{ date(point.date) }}
+      </text>
+    }
+  </svg>
+  @if (active(); as point) {
+    <div
+      class="tooltip"
+      aria-hidden="true"
+      [style.left.px]="tooltipLeft()"
+      [style.top.px]="(point.y ?? top) > 100 ? (point.y ?? top) - 96 : (point.y ?? top) + 12"
+    >
+      <strong>{{ date(point.date) }} · {{ percent(point.bookingConversion) }}</strong>
+      <span>{{ count(point.search) }} search sessions</span>
+      <span>{{ count(point.purchaseCompleted) }} bookings</span>
+    </div>
+  }
+</div>
+<details class="chart-data">
+  <summary>View daily data</summary>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Daily conversion data">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">Search sessions</th>
+          <th scope="col">Bookings</th>
+          <th scope="col">Conversion</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (point of series(); track point.date) {
+          <tr>
+            <th scope="row">{{ date(point.date) }}</th>
+            <td>{{ count(point.search) }}</td>
+            <td>{{ count(point.purchaseCompleted) }}</td>
+            <td>{{ percent(point.bookingConversion) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</details>

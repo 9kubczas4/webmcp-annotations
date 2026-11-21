@@ -1,0 +1,20 @@
+[
+  {
+    "id": "rel-2026-11-05",
+    "deployedAt": "2026-11-05T08:00:00Z",
+    "title": "Search copy refresh",
+    "components": ["search-results"]
+  },
+  {
+    "id": "rel-2026-11-12",
+    "deployedAt": "2026-11-12T08:00:00Z",
+    "title": "Fare selector v2",
+    "components": ["fare-selector", "checkout-summary"]
+  },
+  {
+    "id": "rel-2026-11-17",
+    "deployedAt": "2026-11-17T08:00:00Z",
+    "title": "Footer links update",
+    "components": ["site-footer"]
+  }
+]
