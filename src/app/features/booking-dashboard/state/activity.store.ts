@@ -1,5 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 
+const MAX_ACTIVITY_ENTRIES = 100;
+
 export interface ActivityEntry {
   id: number;
   source: 'User' | 'Agent tool';
@@ -18,7 +20,7 @@ export class ActivityStore {
 
   record(entry: Omit<ActivityEntry, 'id'>): void {
     const id = this.nextId++;
-    this.entries.update((entries) => [{ id, ...entry }, ...entries]);
+    this.entries.update((entries) => [{ ...entry, id }, ...entries].slice(0, MAX_ACTIVITY_ENTRIES));
   }
 
   clear(): void {

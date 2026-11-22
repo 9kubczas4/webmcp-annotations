@@ -36,26 +36,31 @@ const QUERY_FIELDS = ['chartId', ...PERIOD_FIELDS, 'segment'] as const;
 const BASELINE_FIELDS = ['baselineStartDate', 'baselineEndDate'] as const;
 const date = (description: string) => ({
   type: 'string',
+  format: 'date',
   pattern: '^\\d{4}-\\d{2}-\\d{2}$',
   description,
 });
 const PERIOD_PROPERTIES = {
   startDate: date(
-    'First day, inclusive, in YYYY-MM-DD format. Synthetic data starts on 2026-11-01.',
+    'First day of the selected reporting window, inclusive. Demo data covers 2026-11-01 through 2026-11-20.',
   ),
-  endDate: date('Last day, inclusive, in YYYY-MM-DD format. Synthetic data ends on 2026-11-20.'),
+  endDate: date(
+    'Last day of the selected reporting window, inclusive. Demo data covers 2026-11-01 through 2026-11-20.',
+  ),
 };
 const SEGMENT_PROPERTY = {
   type: 'string',
   enum: FILTERS,
-  description: 'Traffic segment to use. Use all to include all four device and browser segments.',
+  description:
+    'Traffic segment to analyze. The all option includes every device and browser segment.',
 };
 
 export function bookingSiteTools(handlers: BookingToolHandlers): SiteTool[] {
   return [
     tool(
       'query_booking_metrics',
-      'Read synthetic booking conversion, daily counts, traffic segments, and funnel transitions for either chart. Optional equal-length baseline windows show differences. Returns the live view and its version without changing the filters.',
+      'Analyze booking performance',
+      'Analyze booking performance for a reporting window and traffic segment, with an optional earlier-period comparison. Use when investigating conversion trends or funnel changes; the result also includes the current dashboard view.',
       true,
       QUERY_FIELDS,
       {
@@ -63,21 +68,23 @@ export function bookingSiteTools(handlers: BookingToolHandlers): SiteTool[] {
         chartId: {
           type: 'string',
           enum: CHART_IDS,
-          description: 'Stable ID of the chart referenced by the user.',
+          description:
+            'Chart to analyze: booking conversion for daily rates and counts, or booking funnel for stage transitions.',
         },
         segment: SEGMENT_PROPERTY,
         baselineStartDate: date(
-          'Optional first day of the earlier comparison window. Supply with baselineEndDate.',
+          'First day of the earlier comparison window. Provide both baseline dates; the windows must have equal length and not overlap.',
         ),
         baselineEndDate: date(
-          'Optional last day of the earlier, non-overlapping window of the same length.',
+          'Last day of the earlier comparison window. Provide both baseline dates; the windows must have equal length and not overlap.',
         ),
       },
       handlers.queryMetrics,
     ),
     tool(
       'get_deployments',
-      'Read fictional deployments in the requested inclusive UTC date range. Daily aggregates cannot establish ordering within a day or prove causation.',
+      'Review deployments',
+      'List demo release deployments in a reporting window to compare release timing with booking trends.',
       true,
       PERIOD_FIELDS,
       PERIOD_PROPERTIES,
@@ -85,7 +92,8 @@ export function bookingSiteTools(handlers: BookingToolHandlers): SiteTool[] {
     ),
     tool(
       'set_dashboard_view',
-      'Update the visible dates, segment, and optional deployment highlight together. Read currentView with query_booking_metrics first to respect any user changes. Annotation metadata describes the view when it was selected.',
+      'Update dashboard view',
+      'Apply a complete set of dates, traffic segment, and deployment highlight to the visible dashboard. The versioned update preserves newer user selections when the supplied view is stale.',
       false,
       VIEW_FIELDS,
       {
@@ -93,12 +101,15 @@ export function bookingSiteTools(handlers: BookingToolHandlers): SiteTool[] {
         segment: SEGMENT_PROPERTY,
         highlightedDeploymentId: {
           type: ['string', 'null'],
-          description: 'Deployment ID inside the selected range, or null to clear the highlight.',
+          description:
+            'Deployment ID from the deployment history that falls within the selected window, or null to clear the highlight.',
         },
         expectedStateVersion: {
           type: 'integer',
           minimum: 1,
-          description: 'Current dashboard version from a recent query_booking_metrics response.',
+          maximum: Number.MAX_SAFE_INTEGER,
+          description:
+            'Version of currentView that this update is based on. Stale versions are rejected to protect newer selections.',
         },
       },
       handlers.setView,
@@ -108,6 +119,7 @@ export function bookingSiteTools(handlers: BookingToolHandlers): SiteTool[] {
 
 function tool(
   name: string,
+  title: string,
   description: string,
   readOnlyHint: boolean,
   required: readonly string[],
@@ -116,10 +128,11 @@ function tool(
 ): SiteTool {
   return {
     name,
+    title,
     description,
     inputSchema: { type: 'object', properties, required, additionalProperties: false },
-    annotations: { readOnlyHint },
     execute,
+    annotations: { readOnlyHint },
   };
 }
 
