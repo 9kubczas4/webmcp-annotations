@@ -70,7 +70,7 @@ Compare November 3–11 with November 12–20. Each period has 90,000 sessions. 
 
 The `booking-conversion-chart` and `booking-funnel-chart` cards each expose six fields through `oai-annotation-metadata`. Metadata describes the card state when it was selected. Before changing filters, the agent reads `currentView`. On `STALE_VIEW`, it can read the view again and account for newer user selections.
 
-Tools are declared with Angular's experimental `provideExperimentalWebMcpTools` route provider. `withAutoCleanupInjectors()` unregisters them when the dashboard route injector is destroyed. Tool calls are logged locally in memory; the host manages annotation comments. See the [WebMCP specification](https://webmachinelearning.github.io/webmcp/).
+Tools are declared with Angular's experimental `provideExperimentalWebMcpTools` route provider. `withAutoCleanupInjectors()` unregisters them when the dashboard route injector is destroyed. Tool calls are logged locally in memory; the activity panel retains the latest 100 entries and limits each logged argument and result preview to 4,000 characters. The host manages annotation comments. See the [WebMCP specification](https://webmachinelearning.github.io/webmcp/).
 
 ## Verification
 

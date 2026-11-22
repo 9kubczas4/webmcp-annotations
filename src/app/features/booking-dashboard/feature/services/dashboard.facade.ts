@@ -22,11 +22,13 @@ import { containsDay } from '@features/booking-dashboard/domain/validation';
 import { ActivityEntry, ActivityStore } from '@features/booking-dashboard/state/activity.store';
 import { DashboardStore } from '@features/booking-dashboard/state/dashboard.store';
 
+const MAX_ACTIVITY_TEXT_LENGTH = 4_000;
+
 @Injectable()
 export class DashboardFacade {
   private readonly dashboard = inject(DashboardStore);
   private readonly activity = inject(ActivityStore);
-  private readonly data = inject(DemoDataRepository).dataset;
+  private readonly dataset = inject(DemoDataRepository).dataset;
   private readonly annotations = inject(AnnotationAdapter);
   private readonly document = inject(DOCUMENT);
   private readonly detectedSiteTools = signal(false);
@@ -54,7 +56,7 @@ export class DashboardFacade {
       return {
         synthetic: true,
         requestedPeriod,
-        deployments: deploymentsIn(this.data.deployments, requestedPeriod),
+        deployments: deploymentsIn(this.dataset.deployments, requestedPeriod),
       };
     });
   }
@@ -110,7 +112,7 @@ export class DashboardFacade {
 
   private queryMetrics(input: unknown) {
     const { chartId, segment, period, baseline: baselinePeriod } = readMetricsRequest(input);
-    const rows = this.data.dailyRows;
+    const rows = this.dataset.dailyRows;
     const report = bookingReport(rows, period, segment);
     const common = {
       datasetId: 'airline-demo-v1',
@@ -168,8 +170,21 @@ export class DashboardFacade {
 
 function display(value: unknown): string {
   try {
-    return JSON.stringify(value, null, 2) ?? String(value);
+    const serialized =
+      JSON.stringify(
+        value,
+        (_key, nestedValue) =>
+          typeof nestedValue === 'string' ? truncateActivityText(nestedValue) : nestedValue,
+        2,
+      ) ?? String(value);
+    return truncateActivityText(serialized);
   } catch {
-    return 'Arguments could not be serialized.';
+    return 'Value could not be serialized.';
   }
+}
+
+function truncateActivityText(value: string): string {
+  return value.length > MAX_ACTIVITY_TEXT_LENGTH
+    ? `${value.slice(0, MAX_ACTIVITY_TEXT_LENGTH - 1)}…`
+    : value;
 }
