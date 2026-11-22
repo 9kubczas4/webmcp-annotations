@@ -1,0 +1,408 @@
+Warning: truncated output (original token count: 24383)
+Total output lines: 860
+
+{
+  "skill_name": "build-webmcp-tools",
+  "evals": [
+    {
+      "id": "stage-6-lighthouse-agentic-audits",
+      "prompt": "What checks does the Lighthouse 'Agentic browsing' audit run on WebMCP applications, and what causes a page to fail?",
+      "expected_output": "The agent details the Lighthouse Agentic browsing audits: paired `toolname`/`tooldescription`, unique field names, parameter description fallback chain, accessibility tree naming, CLS thresholds to prevent agent misclicks, and `/llms.txt` presence. It explains that missing either `toolname` or `tooldescription`, or having inputs without names, triggers audit failures.",
+      "assertions": [
+        "The agent read references/testing-and-debugging.md",
+        "The agent explains pairing toolname and tooldescription on forms",
+        "The agent mentions field names, label/toolparamdescription fallbacks, or accessibility tree readiness",
+        "The agent mentions layout stability (CLS) or /llms.txt"
+      ]
+    },
+    {
+      "id": "stage-6-devtools-webmcp-debugging",
+      "prompt": "How can a developer inspect and debug registered WebMCP tools using Chrome DevTools without invoking an LLM?",
+      "expected_output": "The agent explains opening Chrome DevTools → Application → WebMCP pane to view active tools, check the invocation counter, execute tools manually with custom parameters via the Play icon, and review schema validation warnings.",
+      "assertions": [
+        "The agent read references/testing-and-debugging.md",
+        "The agent points to Chrome DevTools Application > WebMCP pane",
+        "The agent explains manual tool execution or checking invocation counts/schema warnings"
+      ]
+    },
+    {
+      "id": "stage-6-audit-reference-loading-directives",
+      "prompt": "Can you audit the WebMCP tools on our live production site and advise on best practices for error reporting and user-generated content?",
+      "expected_output": "The agent routes to Stage 6 Review Checklist & Auditing. Critically, it reads the relevant reference files (specifically references/agent-security.md and references/error-handling.md) before generating final findings. It details deeper architectural context from these references: the W3C WebMCP unhandled rejection mapping to generic DOMException: OperationError (requiring structured error payloads rather than throwing/rejecting unhandled promises) and the 'First-Party Database Fallacy' where user-authored database records require untrustedContentHint: true and delimiter sandboxing against prompt injection.",
+      "assertions": [
+        "The agent read references/audit-checklist.md",
+        "The agent read references/agent-security.md",
+        "The agent read references/error-handling.md",
+        "The output explains that unhandled promise rejections are mapped by W3C WebMCP to generic DOMException: OperationError.",
+        "The output explains the First-Party Database Fallacy or untrusted user-authored content prompt injection threat model."
+      ]
+    },
+    {
+      "id": "stage-6-devtools-mcp-live-discovery",
+      "prompt": "I'm using chrome-devtools-mcp to audit the WebMCP tools on a live web app (https://example.com/app), and on the initial page I don't see any tools yet. Should I fetch the page's <script> files to find the tool definitions, or how should I discover all registered WebMCP tools across the app?",
+      "expected_output": "The agent warns against fetching or regex-scraping minified production JS bundles on a live site (only inspect source if unminified or sourcemapped). It explains discovering tools at runtime using `list_webmcp_tools` (when `--categoryExperimentalWebmcp` is enabled) or `await document.modelContext.getTools()` via `evaluate_script`. It notes that if `document.modelContext` is `undefined`, WebMCP is not enabled in the browser (`--enable-features=WebMCP` or `chrome://flags/#enable-webmcp-testing`), causing guarded registrations (`if (!document.modelContext) return`) to be skipped. Finally, it instructs walking the app's routes, tabs, and UI states and re-querying tools at each state to build a route/state-to-tools inventory because tools are often dynamically scoped to specific routes or UI states.",
+      "assertions": [
+        "The agent read references/testing-and-debugging.md",
+        "The output advises against fetching or scraping minified production JS bundles on a live site",
+        "The output explains discovering tools at runtime via list_webmcp_tools or document.modelContext.getTools()",
+        "The output explains checking if document.modelContext is undefined because WebMCP flags (--enable-features=WebMCP or chrome://flags/#enable-webmcp-testing) must be enabled in the browser",
+        "The output explains navigating across routes, views, or UI states and re-checking tools at each state because tools can be route-scoped or state-gated"
+      ]
+    },
+    {
+      "id": "stage-6-audit-annotations-default-false",
+      "prompt": "During a code review of our WebMCP tools, an auditor flagged `update_cart_quantity` and `switch_tab` because they omit `annotations: { readOnlyHint: false, consequentialHint: false }`. The auditor insists that WebMCP standards require every mutating and navigation tool to explicitly specify `readOnlyHint: false` and `consequentialHint: false`. Is this audit finding valid, and how should annotations be configured?",
+      "expected_output": "The agent explains that the audit finding is invalid (a false positive). In the W3C WebMCP specification, all tool annotation hints (readOnlyHint, consequentialHint, untrustedContentHint) default to false: omission of readOnlyHint means the tool mutates state, omission of consequentialHint means the action is safe/routine, and omission of untrustedContentHint means output is trusted application data. Annotations are strictly opt-in and should only be specified when true; developers must never declare redundant `: false` properties. Routine mutating tools like update_cart_quantity and navigation tools like switch_tab do not need an annotations object at all unless another hint (such as untrustedContentHint for user-generated content) is true. For navigation tools, the requirement is simply to avoid declaring readOnlyHint: true (they omit it).",
+      "assertions": [
+        "The agent states that the audit finding is invalid or a false positive",
+        "The output explains that all WebMCP annotation hints default to false (omission of readOnlyHint means mutating, omission of consequentialHint means non-consequential)",
+        "The output states that annotations are opt-in and should only be specified when true (never declare : false)",
+        "The output states that routine mutating or navigation tools do not need readOnlyHint: false or an annotations block"
+      ]
+    },
+    {
+      "id": "stage-6-audit-output-schema-drift-and-react",
+      "prompt": "We are auditing a React app's WebMCP tools registered with `useWebMCP` from `use-webmcp-tool`: (1) `list_flights` defines `outputSchema: { type: 'object', properties: { result: { type: 'array', items: { type: 'object', properties: { flight_id: { type: 'string' }, price: { type: 'number' } } } } }, required: ['result'] }`, returns `{ error: 'Flight search unavailable' }` when `!res.ok`, returns a bare array from `execute()` on success, and also sets `formatOutput: (rows) => \\`Found \\${rows.length} flights\\``; (2) `reset_filters` sets `outputSchema: \"\"`. A teammate said 'WebMCP has no `outputSchema` at all, just delete `outputSchema` everywhere.' Audit both tools and our teammate's claim.",
+      "expected_output": "The agent reads references/audit-checklist.md (and references/react-patterns.md or references/tool-design.md) and audits both tools and the teammate's claim accurately: (1) Both WebMCP (`ModelContextTool` in `registerTool()` and `Tool` / `RegisteredTool` in `getTools()`) and `useWebMCP` (`use-webmcp-tool`) support optional `outputSchema`, and `list_flights` is a multi-field search/chaining tool where keeping `outputSchema` is appropriate; (2) In `useWebMCP`, returning a plain `{ error: '...' }` object is treated as a successful execution—`list_flights` must `throw new Error(...)` (which `useWebMCP` catches and normalizes to `isError: true`) rather than returning `{ error }` or adding a `oneOf` `{ error }` branch to `outputSchema`; (3) `list_flights` has severe `outputSchema` vs. `execute()`/`formatOutput` drift because `outputSchema` declares `{ result: [...] }` while `execute()` returns a bare array and `formatOutput` turns it into a prose string (`Found N flights`), which fails schema validation; and (4) `reset_filters` passes a non-object `outputSchema: \"\"` (which throws a `TypeError` in `registerTool()`) and should omit `outputSchema` altogether as a narrow filter-reset tool.",
+      "assertions": [
+        "The agent read references/audit-checklist.md",
+        "The agent corrects the teammate by explaining that WebMCP and useWebMCP support optional outputSchema and recommends keeping outputSchema on list_flights rather than deleting it everywhere",
+        "The agent flags returning a plain { error } object in useWebMCP (which useWebMCP treats as success) and fixes list_flights to throw new Error(...) so useWebMCP normalizes it to isError: true (keeping a success-only outputSchema without a oneOf error branch)",
+        "The agent flags the schema drift on list_flights where outputSchema expects a { result: [...] } object but execute returns a bare array and formatOutput turns it into a formatted string",
+        "The agent flags that non-object outputSchema: \"\" throws a TypeError in document.modelContext.registerTool() and recommends omitting outputSchema on reset_filters rather than adding an empty placeholder schema"
+      ]
+    },
+    {
+      "id": "stage-6-audit-webmcp-vs-mcp-output-schema",
+      "prompt": "Audit these two Vanilla JS WebMCP tools registered on `document.modelContext` (note: a reviewer claimed `get_selected_items` is invalid because its `outputSchema` has root `type: 'array'` instead of `type: 'object'`):\n\n```js\nconst selectedBoardItems = new Map();\nconst selectionCtrl = new AbortController();\nawait document.modelContext.registerTool(\n  {\n    name: 'get_selected_items',\n    description: 'Returns up to 10 issues, bugs, and epics currently selected on the project board. Use when the user asks about selected items before calling move_items.',\n    inputSchema: { type: 'object', properties: {} },\n    outputSchema: {\n      type: 'array',\n      items: {\n        type: 'object',\n        properties: {\n          id: { type: 'string', description: 'Item ID passed to move_items' },\n          type: { type: 'string', enum: ['issue', 'bug', 'epic'] },\n          sprint_id: { type: 'string', description: 'Assigned sprint ID' },\n          blocked_by_ids: { type: 'array', items: { type: 'string' } },\n          priority: { type: 'string', enum: ['p0', 'p1', 'p2'] }\n        },\n        required: ['id', 'type', 'sprint_id', 'blocked_by_ids', 'priority']\n      }\n    },\n    annotations: { readOnlyHint: true },\n    execute() {\n      return Array.from(selectedBoardItems.values()).slice(0, 10);\n    }\n  },\n  { signal: selectionCtrl.signal }\n);\n\nconst commentsCtrl = new AbortController();\nawait document.modelContext.registerTool(\n  {\n    name: 'list_issue_comments',\n    description: 'Lists comments posted by users on an issue. Use when the user wants to read discussion threads on a specific issue.',\n    inputSchema: {\n      type: 'object',\n      properties: { issue_id: { type: 'string', description: 'Issue identifier' } },\n      required: ['issue_id']\n    },\n    outputSchema: {\n      type: 'object',\n      properties: {\n        total_count: { type: 'integer' },\n        comments: {\n          type: 'array',\n          items: {\n            type: 'object',\n            properties: { author: { type: 'string' }, body: { type: 'string' } },\n            required: ['author', 'body']\n          }\n        }\n      },\n      required: ['total_count', 'comments']\n    },\n    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },\n    async execute({ issue_id }, { signal }) {\n      const res = await fetch(`/api/issues/${encodeURIComponent(issue_id)}/comments`, { signal });\n      if (!res.ok) throw new Error('Issue not found');\n      const data = await res.json();\n      return {\n        structuredContent: { total_count: data.total, comments: data.items },\n        content: [{ type: 'text', text: JSON.stringify(data.items) }]\n      };\n    }\n  },\n  { signal: commentsCtrl.signal }\n);\n```",
+      "expected_output": "The agent reads references/audit-checklist.md, references/agent-security.md, and references/error-handling.md and audits both tools accurately. Specifically: (1) It confirms `get_selected_items` is compliant—an infallible synchronous in-memory consolidated/chaining read tool with a root `type: 'array'` `outputSchema` and matching array return is completely valid in WebMCP without needing an error branch or a root `type: 'object'` wrapper (aside from noting `untrustedContentHint` only if user-authored fields were returned, which `id`/`type`/`sprint_id`/`blocked_by_ids`/`priority` are not). (2) On `list_issue_comments`, it flags: (a) `execute()` returning an undeclared `{ structuredContent, content }` wrapper that drifts from its declared `{ total_count, comments }` `outputSchema` (`execute()` must resolve `{ total_count, comments }` directly, and compose `outputSchema` inline with `oneOf` to cover its `{ error }` failure branch); (b) declaring unsupported/non-WebMCP annotations (`destructiveHint: false`, `idempotentHint: true`) and `: false` boilerplate while omitting mandatory `untrustedContentHint: true` on user-authored issue comments; and (c) throwing `new Error(...)` in native `registerTool` (which becomes a generic `DOMException: OperationError`) instead of resolving a structured `{ error }` guide. Finally, it ends with verification steps in the Chrome DevTools Application > WebMCP pane and Lighthouse 'Agentic browsing' audit.",
+      "assertions": [
+        "The agent read references/audit-checklist.md",
+        "The output keeps get_selected_items's root type: \"array\" outputSchema and matching array return as valid in WebMCP (it does NOT omit outputSchema on get_selected_items and does NOT wrap it in type: \"object\")",
+        "The output flags the return-shape / outputSchema mismatch on list_issue_comments and fixes execute() to resolve { total_count, comments } directly rather than wrapping it in { structuredContent, content }",
+        "The output flags the invalid/redundant annotations (destructiveHint / idempotentHint / : false) on list_issue_comments and requires adding untrustedContentHint: true because comments are user-authored content",
+        "The output flags throwing Error in native registerTool on list_issue_comments (which maps to DOMException: OperationError) instead of resolving a structured { error } object (and covering { error } via oneOf in list_issue_comments's outputSchema)",
+        "The output ends with verification steps referencing the Chrome DevTools Application > WebMCP pane and the Lighthouse Agentic browsing audit"
+      ]
+    },
+    {
+      "id": "stage-6-audit-output-schema-gate-live-and-oneof",
+      "prompt": "We are auditing two local Vanilla JS WebMCP tools (`document.modelContext.registerTool`) and one live partner page:\n\n1. `search_catalog`:\n```js\nconst ctrl1 = new AbortController();\nawait document.modelContext.registerTool({\n  name: 'search_catalog',\n  description: 'Searches the product catalog by keyword. Use when the user wants to browse products before adding an item to the cart.',\n  inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Search terms' } }, required: ['query'] },\n  outputSchema: {\n    type: 'object',\n    properties: {\n      total_count: { type: 'integer' },\n      items: { type: 'array', items: { type: 'object', properties: { product_id: { type: 'string' }, price: { type: 'number' } }, required: ['product_id', 'price'] } }\n    },\n    required: ['total_count', 'items']\n  },\n  annotations: { readOnlyHint: true },\n  async execute({ query }, { signal }) {\n    const res = await fetch(`/api/catalog?q=${encodeURIComponent(query)}`, { signal });\n    if (!res.ok) return { error: 'Catalog unavailable. Please retry shortly.', retryable: true };\n    return await res.json();\n  }\n}, { signal: ctrl1.signal });\n```\n2. `convert_currency`:\n```js\nconst ctrl2 = new AbortController();\nawait document.modelContext.registerTool({\n  name: 'convert_currency',\n  description: 'Converts a monetary amount between two ISO 4217 currencies. Use when the user asks how much an amount is in another currency.',\n  inputSchema: { type: 'object', properties: { amount: { type: 'number', description: 'Amount to convert' }, from: { type: 'string', description: 'Source currency code' }, to: { type: 'string', description: 'Target currency code' } }, required: ['amount', 'from', 'to'] },\n  annotations: { readOnlyHint: true },\n  execute({ amount, from, to }) {\n    return { converted_amount: Number((amount * rates[from][to]).toFixed(2)), currency: to };\n  }\n}, { signal: ctrl2.signal });\n```\nA teammate flagged `convert_currency` for missing `outputSchema` ('every `readOnlyHint: true` tool must declare `outputSchema`').\n\n3. On a live partner site (`https://partner.example.com/orders`), we ran `await document.modelContext.getTools()` (we haven't executed any tools yet or seen source code) and saw `{ name: 'get_order_bundle', description: 'Fetches order summary, shipment carrier tracking, and invoice breakdown for an order.', inputSchema: { type: 'object', properties: { order_number: { type: 'string' } }, required: ['order_number'] }, outputSchema: null, annotations: { readOnlyHint: true } }`. Should we write and propose the exact `outputSchema` JSON properties for `get_order_bundle` right now based on that `getTools()` metadata?\n\nAudit all three items.",
+      "expected_output": "The agent reads references/audit-checklist.md (and references/tool-design.md or references/error-handling.md) and audits all three items accurately: (1) On `search_catalog`, keeping `{ error, retryable }` as a resolved return value (never throwing `new Error` in native `registerTool`, which becomes `DOMException: OperationError`) is right, **but** `{ error, retryable }` fails `search_catalog`'s own `required: ['total_count', 'items']` `outputSchema`; the fix is composing `outputSchema` inline with `oneOf` pairing the success schema and a minimal `{ type: 'object', properties: { error: { type: 'string' }, retryable: { type: 'boolean' } }, required: ['error'] }` branch with mutually exclusive `required` keys. (2) On `convert_currency`, the teammate's finding is a false positive: applying the pre-call payoff gate, narrow single-purpose read/transform tools with obvious, non-chained outputs omit `outputSchema`. (3) On live-site `get_order_bundle`, while a consolidated multi-entity lookup passes the pre-call payoff gate for `outputSchema`, the agent warns **not** to invent or infer `outputSchema` property names from `getTools()` name/description metadata alone on an unexecuted live tool—execute `get_order_bundle` first (or inspect unminified source) to observe its actual payload before authoring `outputSchema`. Finally, it ends with Chrome DevTools Application > WebMCP and Lighthouse 'Agentic browsing' verification steps.",
+      "assertions": [
+        "The agent read references/audit-checklist.md",
+        "The output flags that search_catalog's resolved { error, retryable } error payload fails its required: ['total_count', 'items'] outputSchema and fixes outputSchema inline using oneOf to pair the success schema with an { error: string } (required: ['error']) error branch with mutually exclusive / disjoint required fields, WITHOUT telling the developer to throw/reject in native registerTool",
+        "The output rejects adding outputSchema to convert_currency, explaining the pre-call payoff gate (hidden consolidated attributes or downstream chaining) and that narrow single-purpose read or transform tools with obvious, non-chained outputs omit outputSchema",
+        "The output advises NOT inventing or guessing concrete outputSchema field names for the unexecuted live-site get_order_bundle tool from getTools() metadata alone, instructing to execute the tool first (or inspect source) to observe its actual return payload",
+        "The output ends with verification steps referencing the Chrome DevTools Application > WebMCP pane and the Lighthouse Agentic browsing audit"
+      ]
+    },
+    {
+      "id": "core-intab-vs-stdio",
+      "prompt": "How do I configure the stdio transport for WebMCP in my Express backend?",
+      "expected_output": "The agent clarifies that WebMCP runs client-side in the browser tab via document.modelContext and does not use stdio, SSE, or Node.js backend server transports.",
+      "assertions": [
+        "The agent clarifies that WebMCP runs client-side in the browser tab via document.modelContext",
+        "The agent clarifies that WebMCP does not use stdio, SSE, or Node.js backend server transports"
+      ]
+    },
+    {
+      "id": "core-character-budgets",
+      "prompt": "What are the official Chrome character and token budget limits for WebMCP tools?",
+      "expected_output": "The agent specifies character budgets: tool name <= 30 chars, tool description <= 500 chars, parameter description <= 150 chars, and tool output <= 1,500 chars (or ~1.5KB).",
+      "assertions": [
+        "The agent specifies that tool names must be 30 characters or fewer",
+        "The agent specifies that tool descriptions must be 500 characters or fewer",
+        "The agent specifies that parameter descriptions must be 150 characters or fewer",
+        "The agent specifies that tool output should be 1,500 characters or fewer"
+      ]
+    },
+    {
+      "id": "core-naming-initiation-vs-execution",
+      "prompt": "How should I name a tool that navigates the user to a flight checkout form vs one that executes the booking immediately?",
+      "expected_output": "The agent distinguishes execution (e.g. book_flight or create_event) from initiation (e.g. initiate_booking or start_event_creation_process) rather than treating them identically.",
+      "assertions": [
+        "The agent distinguishes initiation actions (e.g. initiate_booking) from execution actions (e.g. book_flight)"
+      ]
+    },
+    {
+      "id": "core-annotations-matrix",
+      "prompt": "Which annotations can I attach to a WebMCP tool and what do they mean?",
+      "expected_output": "The agent explains all three WebMCP annotations: readOnlyHint, consequentialHint, and untrustedContentHint.",
+      "assertions": [
+        "The output explains readOnlyHint",
+        "The output explains consequentialHint",
+        "The output explains untrustedContentHint"
+      ]
+    },
+    {
+      "id": "core-clean-tool-descriptions",
+      "prompt": "A developer wrote this WebMCP tool description: \"Polymorphic Redux-backed mutation handler that dispatches to the internal Express REST controller to update ticket state and invalidate React Query cache.\" What is wrong with this description and how should it be rewritten?",
+      "expected_output": "The agent identifies that internal implementation jargon (e.g. Redux, Express, REST controller, React Query cache) must be strictly omitted because it wastes character budget and causes model confusion or hallucination. It explains that descriptions should focus on user/agent capabilities rather than internal implementation details, and provides a clean rewrite such as \"Updates the status of an existing customer support ticket. Use when marking tickets as open, pending, or resolved.\"",
+     …12383 tokens truncated…enable agent self-correction"
+      ]
+    },
+    {
+      "id": "stage-5-strictly-goal-driven-tools",
+      "prompt": "We only role-played and approved Goal 1 (search flights) in Stages 1–4. When consolidating Stage 5 `schema.json` and `evals.json`, should we also invent tool schemas for cancel_flight, change_seat, and refund_ticket so our schema is complete?",
+      "expected_output": "The agent strictly forbids inventing tools or evals in Stage 5 for un-modeled goals. Tools are discovered interfaces and must be strictly goal-driven. The agent explains the two valid pathways: either the Iterative Incremental Pathway (schema/evals include only Goal 1 tools) or the Portfolio-First Pathway (role-play and approve remaining goals in Stages 2–4 before entering Stage 5).",
+      "assertions": [
+        "The agent forbids inventing tools or evals in Stage 5 for un-modeled or un-approved goals",
+        "The agent explains that tools must be strictly goal-driven and discovered through conversational role-play",
+        "The agent explains the Iterative Incremental Pathway or Portfolio-First Pathway"
+      ]
+    },
+    {
+      "id": "stage-5-eval-gate-user-choice",
+      "prompt": "We just finished generating `schema.json` and `evals.json` in Stage 5. Should the agent immediately start implementing the React code in Stage 6, or what should happen next?",
+      "expected_output": "The agent proactively asks the user whether they want to run the local schema evaluations (`npx webmcp-evals local -t schema.json -e evals.json`) now or proceed directly to Stage 6 application implementation. It does not silently skip evaluations, and explains that if running evals, it checks for `the provider key (GOOGLE_AI for Gemini)` and suggests using a fast model like `-m gemini-3.5-flash-lite`.",
+      "assertions": [
+        "The agent proactively asks the user whether to run evaluations (npx webmcp-evals local) or proceed to Stage 6 application implementation",
+        "The agent emphasizes that running evaluations is an explicit choice for the user rather than an unmentioned afterthought or silent skip",
+        "The agent says to check that the webmcp-evals provider key is set, naming GOOGLE_AI for Gemini (or OPENAI_API_KEY / ANTHROPIC_API_KEY), and does not tell the user to set GEMINI_API_KEY"
+      ]
+    },
+    {
+      "id": "stage-5-evals-format-constraints-and-mock-output",
+      "prompt": "In `evals.json`, how do we test string arguments with regex patterns, pass mock data to downstream steps in multi-step trajectories, and format mid-chain failure messages?",
+      "expected_output": "The agent explains that regex matching requires the `$pattern` constraint object (e.g. `{ \"field\": { \"$pattern\": \"...\" } }`) rather than slash string literals, multi-step trajectories provide `mockOutput` in `expectedCall` so downstream steps receive mock IDs instead of empty objects `{}`, and mid-chain failure messages use lowercase `\"type\": \"functioncall\"` and `\"type\": \"functionresponse\"` with payload nested in `\"response\": { \"result\": ... }`.",
+      "assertions": [
+        "The agent specifies using the $pattern constraint object for regex matching (rather than regex slash strings)",
+        "The agent explains using mockOutput in expectedCall for multi-step trajectories so subsequent steps receive mock state",
+        "The agent specifies lowercase functioncall and functionresponse message types with nested response payload"
+      ]
+    },
+    {
+      "id": "stage-5-output-schema-and-mock-alignment",
+      "prompt": "In Stage 5, write `schema.json` and a chained `evals.json` test case for a flight search flow where `search_flights` returns paginated flights (including `flight_id`, `airline_code`, `price`, `total_count`, `page`, `page_size`) and `initiate_booking(flight_id)` opens the checkout confirmation view. Explain how `outputSchema` should be applied across these two tools and what rule governs `mockOutput` in `evals.json`.",
+      "expected_output": "The agent reads references/evals-format.md and declares a JSON Schema object `outputSchema` on `search_flights` in `schema.json` describing the returned flight items (`flight_id`, etc.) and pagination fields consumed by downstream steps, while omitting `outputSchema` on `initiate_booking` because it is a narrow UI hand-off tool whose output is not consumed by downstream tools. For `evals.json`, the agent states that `mockOutput` on `search_flights` must conform to `search_flights`'s `outputSchema` so mock payloads do not drift from the declared return schema.",
+      "assertions": [
+        "The agent read references/evals-format.md",
+        "The output includes '\"outputSchema\"'",
+        "The agent declares outputSchema on search_flights (covering flight_id and pagination fields) while omitting outputSchema on initiate_booking",
+        "The agent states that mockOutput in evals.json must conform to or match the declared outputSchema to prevent mock-vs-schema drift"
+      ]
+    },
+    {
+      "id": "stage-6-react-implementation",
+      "prompt": "Write the implementation code for search_hotels tool in a React component.",
+      "expected_output": "React implementation using useWebMCP from use-webmcp-tool with readOnlyHint: true, forwarding the execute cancellation { signal } to fetch, and no deprecated APIs.",
+      "assertions": [
+        "The output uses useWebMCP from use-webmcp-tool",
+        "The output includes readOnlyHint: true",
+        "The execute callback receives { signal } (or options.signal) in its second argument and forwards signal to fetch",
+        "The output does NOT include navigator.modelContext",
+        "The output does NOT include unregisterTool"
+      ]
+    },
+    {
+      "id": "stage-6-react-cancellation-signal",
+      "prompt": "Write a React component using useWebMCP for a book_flight tool that POSTs a booking request to /api/bookings. Make sure it marks the action as consequential for user confirmation and supports aborting the in-flight HTTP request if the agent cancels the tool call.",
+      "expected_output": "React component using useWebMCP from use-webmcp-tool v0.3.0+ with annotations: { consequentialHint: true } (without `as any` type casting) and execute(args, { signal }) forwarding signal to fetch('/api/bookings', { ..., signal }).",
+      "assertions": [
+        "The output uses useWebMCP from use-webmcp-tool",
+        "The execute callback receives { signal } (or options.signal) in its second argument and forwards signal to fetch",
+        "The output includes consequentialHint: true",
+        "The output does NOT cast annotations with 'as any'",
+        "The agent read references/react-patterns.md"
+      ]
+    },
+    {
+      "id": "stage-6-angular-implementation",
+      "prompt": "Write the implementation code for search_hotels tool in an Angular application config.",
+      "expected_output": "Angular implementation using provideExperimentalWebMcpTools without deprecated navigator.modelContext.",
+      "assertions": [
+        "The output uses provideExperimentalWebMcpTools",
+        "The output does NOT include navigator.modelContext",
+        "The agent read references/angular-patterns.md",
+        "The agent did NOT read references/react-patterns.md",
+        "The tool description says when the agent should use the tool (What + When), not only what it does"
+      ]
+    },
+    {
+      "id": "stage-6-angular-route-auto-cleanup",
+      "prompt": "How do we configure WebMCP tools in Angular so they are only available on the `/dashboard` route and automatically clean up when the user navigates away?",
+      "expected_output": "The agent shows configuring `provideRouter(routes, withExperimentalAutoCleanupInjectors())` in `appConfig`, and declaring `providers: [provideExperimentalWebMcpTools([...])]` on the `/dashboard` route in `app.routes.ts`.",
+      "assertions": [
+        "The output uses withExperimentalAutoCleanupInjectors with provideRouter",
+        "The output declares provideExperimentalWebMcpTools in route providers",
+        "The agent explains that this automatically cleans up tools upon route navigation"
+      ]
+    },
+    {
+      "id": "stage-6-angular-signal-forms",
+      "prompt": "How do we expose an Angular Signal Form as an AI-callable WebMCP tool without manually authoring a JSON Schema?",
+      "expected_output": "The agent provides `provideExperimentalWebMcpForms()` in root providers, and adds `experimentalWebMcpTool: { name: '...', description: '...' }` to the `form()` configuration, noting that types are inferred from the initial model signals.",
+      "assertions": [
+        "The output includes provideExperimentalWebMcpForms",
+        "The output configures experimentalWebMcpTool in the form() setup",
+        "The agent notes that parameter types are inferred automatically from initial signal values"
+      ]
+    },
+    {
+      "id": "stage-6-vanilla-abortcontroller",
+      "prompt": "Write the implementation code for search_hotels tool in vanilla JavaScript.",
+      "expected_output": "Vanilla JS implementation registering on document.modelContext with AbortController/signal lifecycle management.",
+      "assertions": [
+        "The output registers tools on document.modelContext using registerTool",
+        "The output includes AbortController or signal lifecycle management"
+      ]
+    },
+    {
+      "id": "stage-6-vanilla-cancellation-signal",
+      "prompt": "When authoring a native WebMCP tool on `document.modelContext.registerTool`, how should the `execute` callback handle cancellation when the user or agent aborts the call midway through a long fetch?",
+      "expected_output": "The agent explains that `execute(input, { signal })` receives an `AbortSignal` in its second argument, and code must forward `{ signal }` to `fetch()` or async operations so in-flight HTTP requests abort immediately upon cancellation.",
+      "assertions": [
+        "The agent explains that the execute callback receives { signal } in its second argument",
+        "The agent demonstrates forwarding the signal to fetch() or abortable async operations"
+      ]
+    },
+    {
+      "id": "stage-6-vanilla-consumer-discovery",
+      "prompt": "We are building an in-browser assistant panel. How do we discover available WebMCP tools on the current page, execute one programmatically, and listen for dynamic tool additions or removals?",
+      "expected_output": "The agent shows calling `document.modelContext.getTools()` to list tools, `document.modelContext.executeTool(tool, jsonPayload, { signal })` to run a tool, and listening to `document.modelContext.addEventListener('toolchange', ...)` for catalog changes.",
+      "assertions": [
+        "The output uses document.modelContext.getTools()",
+        "The output uses document.modelContext.executeTool()",
+        "The output listens to the toolchange event on document.modelContext",
+        "The output passes executeTool arguments as a plain object, not as a JSON.stringify string (JSON-string arguments are deprecated from Chrome 155)"
+      ]
+    },
+    {
+      "id": "stage-6-vanilla-structured-errors",
+      "prompt": "In native `document.modelContext.registerTool`, what happens if the `execute` function rejects or throws an unhandled error, and how should recoverable errors be returned so the agent can self-correct?",
+      "expected_output": "The agent explains that unhandled throws/rejections in native WebMCP are converted by the browser into a generic `DOMException: OperationError`, discarding error details. To allow the agent to self-correct, the tool should resolve with a structured error payload (e.g. `{ error, code, retryable }`).",
+      "assertions": [
+        "The agent explains that unhandled rejections map to a generic OperationError in native WebMCP",
+        "The agent instructs resolving with a structured error payload rather than rejecting"
+      ]
+    },
+    {
+      "id": "stage-6-declarative-forms",
+      "prompt": "How do I expose a search tool using declarative HTML forms?",
+      "expected_output": "Declarative HTML form using standard toolname and toolautosubmit attributes, handling submission with event.respondWith.",
+      "assertions": [
+        "The output includes the toolname attribute on the form",
+        "The output includes the toolautosubmit attribute",
+        "The output uses event.respondWith to return the tool result",
+        "The tool description says when the agent should use the tool (What + When), not only what it does"
+      ]
+    },
+    {
+      "id": "stage-6-declarative-structured-validation",
+      "prompt": "In a declarative WebMCP `<form>`, how should our submit event listener return field validation errors back to the AI agent when required form fields are missing or invalid?",
+      "expected_output": "The agent explains checking `event.agentInvoked`, collecting field-level errors (e.g. `[{ field, message }]`), and resolving them via `event.respondWith(Promise.resolve(errors))` rather than calling `Promise.reject()`, ensuring the model receives specific field correction guidance.",
+      "assertions": [
+        "The output checks event.agentInvoked",
+        "The output resolves structured field validation errors via event.respondWith",
+        "The agent explains that resolving errors prevents them from being swallowed as generic DOMException errors"
+      ]
+    },
+    {
+      "id": "stage-6-declarative-lifecycle-and-styling",
+      "prompt": "How can a web application provide visual feedback to users when an AI agent is actively populating and submitting a declarative WebMCP form?",
+      "expected_output": "The agent explains listening to lifecycle events `toolactivated` and `toolcancel` on `document.modelContext` to toggle UI banners or indicators, and styling `:tool-form-active` and `:tool-submit-active` pseudo-classes to highlight the form and submit buttons.",
+      "assertions": [
+        "The output references document.modelContext lifecycle events toolactivated and toolcancel",
+        "The output references CSS pseudo-classes :tool-form-active or :tool-submit-active"
+      ]
+    },
+    {
+      "id": "stage-6-declarative-autosubmit-policy",
+      "prompt": "When should the `toolautosubmit` attribute be omitted from a declarative WebMCP `<form>` element, and what behavior does omitting it trigger?",
+      "expected_output": "The agent explains that `toolautosubmit` must be omitted for financial transactions, deletions, or high-risk actions to keep the human in the loop. Omitting it causes the browser to pre-fill the form fields and highlight the submit button (`:tool-submit-active`), leaving the final submit click to the user.",
+      "assertions": [
+        "The agent specifies omitting toolautosubmit for financial, destructive, or high-risk actions",
+        "The agent explains that omitting toolautosubmit pre-fills the form and requires the human user to confirm submission"
+      ]
+    },
+    {
+      "id": "stage-6-react-error-handling",
+      "prompt": "In useWebMCP, how should I handle a validation error when the user provides an invalid flight date?",
+      "expected_output": "Instructs throwing an Error instance (throw new Error) so the tool result receives isError: true, and advises against returning error objects.",
+      "assertions": [
+        "The agent instructs throwing an Error (e.g. throw new Error) so the tool result receives isError: true",
+        "The agent advises against returning error objects as successful responses"
+      ]
+    },
+    {
+      "id": "stage-6-react-polymorphic",
+      "prompt": "Write the implementation code for a polymorphic tool list_items in a React component that queries across multiple entity types (issues and bug reports).",
+      "expected_output": "React implementation using useWebMCP and Promise.all for concurrent fetching with readOnlyHint: true.",
+      "assertions": [
+        "The output uses useWebMCP from use-webmcp-tool",
+        "The output uses Promise.all for concurrent entity fetching",
+        "The output includes readOnlyHint: true"
+      ]
+    },
+    {
+      "id": "stage-6-react-enabled-gating",
+      "prompt": "In a multi-step checkout wizard React component that handles 'cart', 'shipping', and 'payment' steps, how do we expose the `apply_coupon` tool only during the 'payment' step without unmounting the wizard component?",
+      "expected_output": "The agent uses the `enabled` option of `useWebMCP` (e.g. `enabled: currentStep === 'payment'`), explaining that this conditionally registers the tool with the browser model context only during the valid wizard step and unregisters it when leaving that step.",
+      "assertions": [
+        "The output uses useWebMCP from use-webmcp-tool",
+        "The output configures the enabled property (e.g. enabled: currentStep === 'payment')",
+        "The agent explains that enabled conditionally registers and unregisters the tool based on component state"
+      ]
+    },
+    {
+      "id": "stage-6-react-schema-stability",
+      "prompt": "A developer notices that their React component re-registers its WebMCP tool on every re-render even though the tool name didn't change. Why does `useWebMCP` do this, and how can the developer prevent registration churn?",
+      "expected_output": "The agent explains that `useWebMCP` checks registration dependencies using `JSON.stringify()` for `inputSchema` and `annotations`. If inline schema objects are recreated with different key ordering or dynamically constructed on each render, it triggers unnecessary unregister and re-register cycles. The fix is to hoist schema objects outside the component or ensure stable object literal key ordering.",
+      "assertions": [
+        "The output includes 'JSON.stringify'",
+        "The agent identifies key-order sensitivity or inline object recreation as the cause of re-registration churn",
+        "The agent recommends hoisting schema definitions outside the component to keep them stable"
+      ]
+    },
+    {
+      "id": "stage-6-react-unit-testing",
+      "prompt": "How do we write a deterministic unit test in Vitest and React Testing Library to verify that our React component's WebMCP tool executes and updates component state, without calling any AI models?",
+      "expected_output": "The agent writes a test that mocks `document.modelContext.registerTool`, renders the component, captures the registered tool definition and options from the mock, executes `tool.execute(...)` directly, and asserts expected return values and DOM/state updates.",
+      "assertions": [
+        "The test mocks document.modelContext.registerTool",
+        "The test renders the React component and inspects mock calls to registerTool",
+        "The test directly invokes tool.execute with test parameters and asserts the result or state update"
+      ]
+    },
+    {
+      "id": "stage-6-declarative-api-failure",
+      "prompt": "Write a declarative WebMCP <form> for reserving a restaurant table. Its submit handler posts to our /api/reservations endpoint. How should the handler report a failed API call (for example, no availability or a 500 error) back to the AI agent?",
+      "expected_output": "A <form toolname tooldescription> whose submit listener checks event.agentInvoked and passes a promise to event.respondWith. When the API call fails, that promise resolves with a structured error payload (e.g. { error, code, retryable, suggestion }) instead of throwing, rethrowing in .catch, or rejecting, because a rejected respondWith promise reaches the agent only as a generic DOMException: OperationError.",
+      "assertions": [
+        "The output uses event.respondWith to return the result to the agent",
+        "When the API call fails, the promise passed to event.respondWith resolves with a structured error payload (e.g. { error, code, retryable }) rather than throwing, rethrowing inside .catch, or rejecting",
+        "The agent explains that a rejected event.respondWith promise reaches the agent only as a generic DOMException: OperationError"
+      ]
+    },
+    {
+      "id": "stage-6-react-polymorphic-roundtrip",
+      "prompt": "Write React useWebMCP tools for our project tracker: list_items, which searches across issues and bug reports, and move_items, which moves a batch of items to a sprint.",
+      "expected_output": "Two useWebMCP tools from use-webmcp-tool. list_items tags each result with a type value, and move_items accepts items: [{ type, id }] whose type enum uses exactly the same values as list_items (either both singular or both plural), so list_items output is valid move_items input. list_items fetches entity types concurrently with Promise.all.",
+      "assertions": [
+        "The output uses useWebMCP from use-webmcp-tool",
+        "move_items accepts an array of { type, id } items",
+        "The type values list_items returns for each item are the same set of strings move_items accepts for items[].type (either both singular or both plural). It is a failure only if they differ, e.g. list_items returns 'issues' while move_items accepts 'issue'."
+      ]
+    },
+    {
+      "id": "stage-6-vanilla-store-errors",
+      "prompt": "Write a Vue 3 composable that registers an add_to_cart WebMCP tool with document.modelContext.registerTool, backed by a Pinia cart store whose addItem() can throw (for example, when an item is out of stock).",
+      "expected_output": "A composable that registers add_to_cart on document.modelContext with an AbortController signal and returns a cleanup that aborts it. The execute callback wraps cartStore.addItem in try/catch and resolves a structured error payload (e.g. { error, code, retryable }) on failure, because an unhandled throw in native registerTool reaches the agent only as a generic DOMException: OperationError.",
+      "assertions": [
+        "The output registers the tool with document.modelContext.registerTool and unregisters it via AbortController",
+        "The execute callback catches failures from cartStore.addItem and resolves a structured error payload (e.g. { error, code, retryable }) instead of letting the error propagate as a rejection"
+      ]
+    },
+    {
+      "id": "stage-6-typescript-webmcp-types",
+      "prompt": "We're adding WebMCP tools to our existing TypeScript app. We already wrote our own types for it in src/webmcp.d.ts:\n\n```ts\ninterface WebMCPTool {\n  name: string;\n  description: string;\n  inputSchema: object;\n  execute: (args: Record<string, unknown>) => string | Promise<string>;\n}\n\ninterface ModelContext {\n  registerTool(tool: WebMCPTool, options?: { signal?: AbortSignal }): void;\n}\n\ndeclare global {\n  interface Document {\n    modelContext?: ModelContext;\n  }\n}\n```\n\nIs this a good setup for our WebMCP types?",
+      "expected_output": "The agent recommends replacing the hand-written declarations with the webmcp-types package (npm install -D webmcp-types), which is maintained with the WebMCP spec and augments the global DOM types, and shows how to enable it: add \"webmcp-types\" to compilerOptions.types in tsconfig.json (adding to any existing types array, since listing types restricts which @types packages are included) or use /// <reference types=\"webmcp-types\" />. It explains that hand-written types drift from the spec and miss parts of the API, e.g. this execute signature has no second argument, so the execution cancellation signal is never available, and annotations are missing.",
+      "assertions": [
+        "The agent recommends replacing the hand-written WebMCP declarations with the webmcp-types package",
+        "The agent explains at least one way to enable webmcp-types (either compilerOptions.types in tsconfig.json, or a /// <reference types=\"webmcp-types\" /> directive; one is enough)",
+        "The agent explains that hand-written types drift from the spec or miss parts of the API, such as the execute callback's second argument with the cancellation signal, or annotations"
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { DOCUMENT, inject, Injectable, signal } from '@angular/core';
+import { ApplicationRef, DOCUMENT, inject, Injectable, signal } from '@angular/core';
 import { AnnotationAdapter } from '@features/booking-dashboard/data-access/annotation.adapter';
 import {
   readDeploymentPeriod,
@@ -31,6 +31,7 @@ export class DashboardFacade {
   private readonly dataset = inject(DemoDataRepository).dataset;
   private readonly annotations = inject(AnnotationAdapter);
   private readonly document = inject(DOCUMENT);
+  private readonly applicationRef = inject(ApplicationRef);
   private readonly detectedSiteTools = signal(false);
 
   readonly annotationsAvailable = this.annotations.available;
@@ -61,10 +62,12 @@ export class DashboardFacade {
     });
   }
 
-  setDashboardViewForAgent(input: unknown): ToolResult<unknown> {
-    return this.record('Agent tool', 'set_dashboard_view', input, () =>
+  async setDashboardViewForAgent(input: unknown): Promise<ToolResult<unknown>> {
+    const result = this.record('Agent tool', 'set_dashboard_view', input, () =>
       this.dashboard.setView(input),
     );
+    await this.applicationRef.whenStable();
+    return result;
   }
 
   applyDates(period: Period) {
@@ -111,40 +114,65 @@ export class DashboardFacade {
   }
 
   private queryMetrics(input: unknown) {
-    const { chartId, segment, period, baseline: baselinePeriod } = readMetricsRequest(input);
+    const { chartId, segment, period, baseline: baselinePeriod, page, pageSize } =
+      readMetricsRequest(input);
     const rows = this.dataset.dailyRows;
     const report = bookingReport(rows, period, segment);
+    const currentView = this.dashboard.view();
     const common = {
-      datasetId: 'airline-demo-v1',
       synthetic: true,
-      units: {
-        counts: 'sessions',
-        rates: 'proportions from 0 to 1',
-        conversionChangePp: 'percentage points',
-      },
-      conversionDefinition:
-        'Sessions that completed a purchase divided by search sessions in the same cohort.',
       requestedFilters: { chartId, ...period, segment },
-      currentView: this.dashboard.view(),
-      ...report,
+      currentView,
     };
-    if (!baselinePeriod) return common;
+    const result =
+      chartId === 'booking-conversion-chart'
+        ? {
+            ...common,
+            totals: report.totals,
+            dailySeries: {
+              page,
+              page_size: pageSize,
+              total_count: report.dailySeries.length,
+              items: report.dailySeries
+                .slice((page - 1) * pageSize, page * pageSize)
+                .map(({ date, search, purchaseCompleted, bookingConversion }) => ({
+                  date,
+                  search,
+                  purchaseCompleted,
+                  bookingConversion,
+                })),
+            },
+          }
+        : {
+            ...common,
+            funnel: report.funnel.map(({ id, count, rateFromSearch, transitionRate }) => ({
+              stage: id,
+              count,
+              rateFromSearch,
+              transitionRate,
+            })),
+          };
+    if (!baselinePeriod) return result;
 
     const baseline = bookingReport(rows, baselinePeriod, segment);
+    const totalsComparison = compareTotals(report.totals, baseline.totals);
     return {
-      ...common,
-      baseline: { period: baselinePeriod, ...baseline },
+      ...result,
+      baseline:
+        chartId === 'booking-conversion-chart'
+          ? { period: baselinePeriod, totals: baseline.totals }
+          : {
+              period: baselinePeriod,
+              funnel: baseline.funnel.map(({ id, count, rateFromSearch, transitionRate }) => ({
+                stage: id,
+                count,
+                rateFromSearch,
+                transitionRate,
+              })),
+            },
       comparison: {
-        ...compareTotals(report.totals, baseline.totals),
-        funnel: report.funnel.map((after, index) => ({
-          stage: after.id,
-          before: baseline.funnel[index],
-          after,
-        })),
-        segments: report.segments.map((after, index) => {
-          const before = baseline.segments[index];
-          return { segment: after.segment, before, after, ...compareTotals(after, before) };
-        }),
+        bookingDifference: totalsComparison.bookingDifference,
+        conversionChangePp: totalsComparison.conversionChangePp,
       },
     };
   }
