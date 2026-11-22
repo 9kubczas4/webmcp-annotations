@@ -38,10 +38,10 @@ describe('DashboardFacade with WebMCP (test host)', () => {
     const { dispose, injector, tools, registerTool } = setup();
     await vi.waitFor(() => expect(tools.size).toBe(3));
     expect(registerTool).toHaveBeenCalledTimes(3);
-    expect([...tools.values()].map((tool) => [tool.name, tool.annotations.readOnlyHint])).toEqual([
+    expect([...tools.values()].map((tool) => [tool.name, tool.annotations?.readOnlyHint])).toEqual([
       ['query_booking_metrics', true],
       ['get_deployments', true],
-      ['set_dashboard_view', false],
+      ['set_dashboard_view', undefined],
     ]);
     expect(injector.get(ActivityStore).log()).toHaveLength(0);
     dispose();
@@ -58,20 +58,20 @@ describe('DashboardFacade with WebMCP (test host)', () => {
     const original = store.view();
 
     expect(await metrics.execute(query)).toMatchObject({
-      ok: true,
-      data: {
-        synthetic: true,
-        currentView: original,
-        requestedFilters: { ...period, segment: 'all' },
-        totals: { purchaseCompleted: 3_060 },
-        baseline: { totals: { purchaseCompleted: 3_600 } },
-        comparison: {
-          bookingDifference: -540,
-          segments: expect.arrayContaining([
-            expect.objectContaining({ segment: 'mobile_safari', bookingDifference: -540 }),
-          ]),
-        },
+      synthetic: true,
+      currentView: original,
+      requestedFilters: { ...period, segment: 'all' },
+      totals: { purchaseCompleted: 3_060 },
+      dailySeries: {
+        page: 1,
+        page_size: 7,
+        total_count: 9,
+        items: expect.arrayContaining([
+          expect.objectContaining({ date: '2026-11-12', search: 10_000, purchaseCompleted: 340 }),
+        ]),
       },
+      baseline: { totals: { purchaseCompleted: 3_600 } },
+      comparison: { bookingDifference: -540 },
     });
     expect(
       await metrics.execute({
@@ -80,27 +80,21 @@ describe('DashboardFacade with WebMCP (test host)', () => {
         segment: 'mobile_safari',
       }),
     ).toMatchObject({
-      ok: true,
-      data: {
-        comparison: {
-          funnel: expect.arrayContaining([
-            expect.objectContaining({
-              stage: 'fareSelected',
-              before: expect.objectContaining({ transitionRate: 0.5 }),
-              after: expect.objectContaining({ transitionRate: 0.25 }),
-            }),
-            expect.objectContaining({
-              stage: 'purchaseCompleted',
-              before: expect.objectContaining({ transitionRate: 0.4 }),
-              after: expect.objectContaining({ transitionRate: 0.2 }),
-            }),
-          ]),
-        },
+      requestedFilters: { chartId: 'booking-funnel-chart', segment: 'mobile_safari' },
+      funnel: expect.arrayContaining([
+        expect.objectContaining({ stage: 'fareSelected', transitionRate: 0.25 }),
+        expect.objectContaining({ stage: 'purchaseCompleted', transitionRate: 0.2 }),
+      ]),
+      baseline: {
+        funnel: expect.arrayContaining([
+          expect.objectContaining({ stage: 'fareSelected', transitionRate: 0.5 }),
+          expect.objectContaining({ stage: 'purchaseCompleted', transitionRate: 0.4 }),
+        ]),
       },
     });
     expect(
       await deployments.execute({ startDate: '2026-11-10', endDate: '2026-11-14' }),
-    ).toMatchObject({ ok: true, data: { deployments: [{ id: 'rel-2026-11-12' }] } });
+    ).toMatchObject({ deployments: [{ id: 'rel-2026-11-12' }] });
     expect(store.view()).toBe(original);
     const view = {
       startDate: original.startDate,
@@ -110,13 +104,14 @@ describe('DashboardFacade with WebMCP (test host)', () => {
       expectedStateVersion: 1,
     };
     expect(await setView.execute(view)).toMatchObject({
-      ok: true,
-      data: {
-        changed: true,
-        currentView: { segment: 'mobile_safari', stateVersion: 2 },
-      },
+      changed: true,
+      currentView: { segment: 'mobile_safari', stateVersion: 2 },
     });
-    expect(await setView.execute(view)).toMatchObject({ ok: false, error: { code: 'STALE_VIEW' } });
+    expect(await setView.execute(view)).toMatchObject({
+      code: 'STALE_VIEW',
+      retryable: false,
+      error: 'The dashboard changed. Read currentView again before applying filters.',
+    });
     expect(store.view()).toMatchObject({
       segment: 'mobile_safari',
       highlightedDeploymentId: 'rel-2026-11-12',
@@ -155,13 +150,13 @@ describe('DashboardFacade with WebMCP (test host)', () => {
       null,
     ]) {
       expect(await metrics.execute(invalid)).toMatchObject({
-        ok: false,
-        error: { code: 'INVALID_ARGUMENT' },
+        code: 'INVALID_ARGUMENT',
+        retryable: false,
       });
     }
     expect(await metrics.execute({ ...query, chartId: 'unknown' })).toMatchObject({
-      ok: false,
-      error: { code: 'UNKNOWN_ID' },
+      code: 'UNKNOWN_ID',
+      retryable: false,
     });
     dispose();
   });
