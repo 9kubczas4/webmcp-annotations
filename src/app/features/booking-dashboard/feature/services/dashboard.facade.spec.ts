@@ -1,8 +1,9 @@
+import { createEnvironmentInjector, EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivityStore } from '@features/booking-dashboard/state/activity.store';
 import { DashboardStore } from '@features/booking-dashboard/state/dashboard.store';
 import { SiteTool } from '@features/booking-dashboard/data-access/booking-site-tools';
-import { DASHBOARD_PAGE_PROVIDERS, DashboardFacade } from './dashboard.facade';
+import { DASHBOARD_ROUTE_PROVIDERS } from './dashboard-route.providers';
 
 const period = { startDate: '2026-11-12', endDate: '2026-11-20' };
 const query = {
@@ -20,10 +21,12 @@ function setup() {
     signal.addEventListener('abort', () => tools.delete(tool.name), { once: true });
   });
   Object.defineProperty(document, 'modelContext', { configurable: true, value: { registerTool } });
-  TestBed.configureTestingModule({ providers: DASHBOARD_PAGE_PROVIDERS });
-  const adapter = TestBed.inject(DashboardFacade);
-  const dispose = adapter.mount();
-  return { adapter, dispose, tools, registerTool };
+  TestBed.configureTestingModule({});
+  const injector = createEnvironmentInjector(
+    DASHBOARD_ROUTE_PROVIDERS,
+    TestBed.inject(EnvironmentInjector),
+  );
+  return { dispose: () => injector.destroy(), injector, tools, registerTool };
 }
 
 describe('DashboardFacade with WebMCP (test host)', () => {
@@ -31,32 +34,27 @@ describe('DashboardFacade with WebMCP (test host)', () => {
     Reflect.deleteProperty(document, 'modelContext');
   });
 
-  it('registers three tools once per mount and aborts registrations on cleanup', async () => {
-    const { adapter, dispose, tools, registerTool } = setup();
-    adapter.mount();
-    await vi.waitFor(() => expect(adapter.siteToolsReady()).toBe(true));
+  it('registers three tools for the route injector and aborts them on cleanup', async () => {
+    const { dispose, injector, tools, registerTool } = setup();
+    await vi.waitFor(() => expect(tools.size).toBe(3));
     expect(registerTool).toHaveBeenCalledTimes(3);
     expect([...tools.values()].map((tool) => [tool.name, tool.annotations.readOnlyHint])).toEqual([
       ['query_booking_metrics', true],
       ['get_deployments', true],
       ['set_dashboard_view', false],
     ]);
-    expect(TestBed.inject(ActivityStore).log()).toHaveLength(0);
+    expect(injector.get(ActivityStore).log()).toHaveLength(0);
     dispose();
-    expect(tools.size).toBe(0);
-    const disposeAgain = adapter.mount();
-    await vi.waitFor(() => expect(registerTool).toHaveBeenCalledTimes(6));
-    disposeAgain();
     expect(tools.size).toBe(0);
   });
 
   it('returns read-only evidence and applies the actual shared view through its write handler', async () => {
-    const { adapter, tools, dispose } = setup();
-    await vi.waitFor(() => expect(adapter.siteToolsReady()).toBe(true));
+    const { injector, tools, dispose } = setup();
+    await vi.waitFor(() => expect(tools.size).toBe(3));
     const metrics = tools.get('query_booking_metrics')!;
     const deployments = tools.get('get_deployments')!;
     const setView = tools.get('set_dashboard_view')!;
-    const store = TestBed.inject(DashboardStore);
+    const store = injector.get(DashboardStore);
     const original = store.view();
 
     expect(await metrics.execute(query)).toMatchObject({
@@ -125,7 +123,8 @@ describe('DashboardFacade with WebMCP (test host)', () => {
       stateVersion: 2,
     });
     expect(
-      TestBed.inject(ActivityStore)
+      injector
+        .get(ActivityStore)
         .log()
         .map((entry) => [entry.source, entry.name, entry.ok]),
     ).toEqual([
@@ -139,8 +138,8 @@ describe('DashboardFacade with WebMCP (test host)', () => {
   });
 
   it('validates baseline pairs, lengths, overlap, IDs and extra arguments in the handler', async () => {
-    const { adapter, tools, dispose } = setup();
-    await vi.waitFor(() => expect(adapter.siteToolsReady()).toBe(true));
+    const { tools, dispose } = setup();
+    await vi.waitFor(() => expect(tools.size).toBe(3));
     const metrics = tools.get('query_booking_metrics')!;
     const partial = {
       ...period,
