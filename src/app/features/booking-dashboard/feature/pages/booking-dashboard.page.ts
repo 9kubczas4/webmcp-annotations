@@ -1,9 +1,7 @@
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
   inject,
   linkedSignal,
   signal,
@@ -21,23 +19,18 @@ import {
 } from '@features/booking-dashboard/domain/booking-model';
 import { DashboardStore } from '@features/booking-dashboard/state/dashboard.store';
 import { count, dayLabel, percent } from '@features/booking-dashboard/ui/booking-format';
-import {
-  DashboardFacade,
-  DASHBOARD_PAGE_PROVIDERS,
-} from '@features/booking-dashboard/feature/services/dashboard.facade';
+import { DashboardFacade } from '@features/booking-dashboard/feature/services/dashboard.facade';
 
 @Component({
   selector: 'app-booking-dashboard',
   imports: [ConversionChart],
   templateUrl: './booking-dashboard.page.html',
-  providers: DASHBOARD_PAGE_PROVIDERS,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BookingDashboardPage {
   private readonly dashboard = inject(DashboardStore);
   protected readonly activity = inject(ActivityStore);
   protected readonly facade = inject(DashboardFacade);
-  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly limits = DATASET_PERIOD;
   protected readonly filters = FILTERS;
@@ -65,12 +58,6 @@ export class BookingDashboardPage {
   protected readonly funnelMetadata = computed(() =>
     this.facade.annotationMetadata('booking-funnel-chart'),
   );
-
-  constructor() {
-    afterNextRender(() => {
-      this.destroyRef.onDestroy(this.facade.mount());
-    });
-  }
 
   protected setDraft(field: keyof Period, value: string): void {
     this.dateError.set('');

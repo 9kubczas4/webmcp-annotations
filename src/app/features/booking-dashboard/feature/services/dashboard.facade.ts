@@ -1,12 +1,10 @@
-import { inject, Injectable, Provider } from '@angular/core';
+import { DOCUMENT, inject, Injectable, signal } from '@angular/core';
 import { AnnotationAdapter } from '@features/booking-dashboard/data-access/annotation.adapter';
 import {
-  bookingSiteTools,
   readDeploymentPeriod,
   readMetricsRequest,
 } from '@features/booking-dashboard/data-access/booking-site-tools';
 import { DemoDataRepository } from '@features/booking-dashboard/data-access/demo-data.repository';
-import { WebMcpAdapter } from '@features/booking-dashboard/data-access/web-mcp.adapter';
 import {
   bookingReport,
   compareTotals,
@@ -17,6 +15,7 @@ import {
   INITIAL_FILTERS,
   Period,
   resultOf,
+  ToolResult,
   ViewState,
 } from '@features/booking-dashboard/domain/booking-model';
 import { containsDay } from '@features/booking-dashboard/domain/validation';
@@ -29,30 +28,40 @@ export class DashboardFacade {
   private readonly activity = inject(ActivityStore);
   private readonly data = inject(DemoDataRepository).dataset;
   private readonly annotations = inject(AnnotationAdapter);
-  private readonly webMcp = inject(WebMcpAdapter);
+  private readonly document = inject(DOCUMENT);
+  private readonly detectedSiteTools = signal(false);
 
   readonly annotationsAvailable = this.annotations.available;
-  readonly siteToolsAvailable = this.webMcp.available;
-  readonly siteToolsReady = this.webMcp.ready;
+  readonly siteToolsAvailable = this.detectedSiteTools.asReadonly();
 
-  mount(): () => void {
+  constructor() {
     this.annotations.detect();
-    return this.webMcp.mount(
-      bookingSiteTools({
-        queryMetrics: async (args) =>
-          this.record('Agent tool', 'query_booking_metrics', args, () => this.queryMetrics(args)),
-        getDeployments: async (args) =>
-          this.record('Agent tool', 'get_deployments', args, () => {
-            const requestedPeriod = readDeploymentPeriod(args);
-            return {
-              synthetic: true,
-              requestedPeriod,
-              deployments: deploymentsIn(this.data.deployments, requestedPeriod),
-            };
-          }),
-        setView: async (args) =>
-          this.record('Agent tool', 'set_dashboard_view', args, () => this.dashboard.setView(args)),
-      }),
+    const navigator = this.document.defaultView?.navigator as
+      (Navigator & Pick<Document, 'modelContext'>) | undefined;
+    const context = this.document.modelContext ?? navigator?.modelContext;
+    this.detectedSiteTools.set(typeof context?.registerTool === 'function');
+  }
+
+  queryMetricsForAgent(input: unknown): ToolResult<unknown> {
+    return this.record('Agent tool', 'query_booking_metrics', input, () =>
+      this.queryMetrics(input),
+    );
+  }
+
+  getDeploymentsForAgent(input: unknown): ToolResult<unknown> {
+    return this.record('Agent tool', 'get_deployments', input, () => {
+      const requestedPeriod = readDeploymentPeriod(input);
+      return {
+        synthetic: true,
+        requestedPeriod,
+        deployments: deploymentsIn(this.data.deployments, requestedPeriod),
+      };
+    });
+  }
+
+  setDashboardViewForAgent(input: unknown): ToolResult<unknown> {
+    return this.record('Agent tool', 'set_dashboard_view', input, () =>
+      this.dashboard.setView(input),
     );
   }
 
@@ -156,15 +165,6 @@ export class DashboardFacade {
     return result;
   }
 }
-
-export const DASHBOARD_PAGE_PROVIDERS: Provider[] = [
-  DashboardFacade,
-  ActivityStore,
-  {
-    provide: DashboardStore,
-    useFactory: () => new DashboardStore(inject(DemoDataRepository).dataset),
-  },
-];
 
 function display(value: unknown): string {
   try {

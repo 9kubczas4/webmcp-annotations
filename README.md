@@ -21,22 +21,22 @@ Open [http://localhost:4200](http://localhost:4200/). The production build is wr
 
 Angular source code, public assets, and styles live directly in `src/`. The root component renders the page header and `RouterOutlet`. The `/` route loads the `booking-dashboard` feature through its public API. App routing helpers live in `app/core/routing`, and route configuration lives in `app.routes.ts`.
 
-The dashboard is implemented as a single feature. `BookingDashboardPage` reads state signals and delegates actions to `DashboardFacade`. The page and WebMCP handlers share the same page-scoped `DashboardStore`, initialized with data from the repository.
+The dashboard is implemented as a single feature. `BookingDashboardPage` reads state signals and delegates actions to `DashboardFacade`. The route and WebMCP handlers share the same route-scoped `DashboardStore`, initialized with data from the repository.
 
-| Layer | Responsibility |
-| --- | --- |
-| `domain` | Types, validation, cohort aggregation, and conversion calculations as pure functions. |
-| `state` | Signals, derived data, activity log, and synchronous versioned view updates. |
-| `data-access` | JSON loading and validation, tool definitions, and browser API adapters. |
-| `ui` | Chart component and number/date formatting for presentation. |
-| `feature` | Routed page, provider composition, action handling, and integration lifecycle. |
+| Layer         | Responsibility                                                                        |
+| ------------- | ------------------------------------------------------------------------------------- |
+| `domain`      | Types, validation, cohort aggregation, and conversion calculations as pure functions. |
+| `state`       | Signals, derived data, activity log, and synchronous versioned view updates.          |
+| `data-access` | JSON loading and validation, tool definitions, and browser API adapters.              |
+| `ui`          | Chart component and number/date formatting for presentation.                          |
+| `feature`     | Routed page, route-provider composition, and action handling.                         |
 
 TypeScript path aliases are used for imports between layers. ESLint enforces boundaries for both aliases and relative imports, while `npm run check:boundaries` checks allowed and forbidden dependency examples. Tailwind CSS v4 runs through PostCSS. The global `src/styles.css` contains shared base styles and dashboard styles.
 
 ## Five-minute demo
 
 1. In ChatGPT desktop Work or Codex, open the dashboard in its built-in browser and use a supported model. If integrations are disabled, check the site permissions and the **Enable site tools** and **Annotation features** settings. A hosted version requires HTTPS. See [Site tools](https://learn.chatgpt.com/docs/webmcp) and [Annotations Extensibility](https://learn.chatgpt.com/docs/annotations-extensibility).
-2. Expand **Integration diagnostics**. In a browser that supports both integrations, the panel shows two `available` statuses and `3 registered` tools. On the initial **All traffic** view for November 3–20, point out the daily conversion drop from 4.0% to 3.4%.
+2. Expand **Integration diagnostics**. In a browser that supports both integrations, the panel shows two `available` statuses and `3 declared` tools. On the initial **All traffic** view for November 3–20, point out the daily conversion drop from 4.0% to 3.4%.
 3. Annotate the full **Booking conversion** card or click **Ask about this chart**. Enter the following comment in the native annotation editor and send it to ChatGPT:
 
    > Investigate the conversion drop from November 12. Compare it with the preceding period, identify the affected segment and funnel steps, inspect nearby deployments, and show me the affected segment in this dashboard. Distinguish evidence from hypotheses.
@@ -50,19 +50,19 @@ Compare November 3–11 with November 12–20. Each period has 90,000 sessions. 
 
 ## Integrations
 
-| Tool | Behavior |
-| --- | --- |
+| Tool                    | Behavior                                                                                                                                                                                  |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `query_booking_metrics` | Returns counts, ratios, daily series, funnel stages, and four traffic segments, optionally compared with an equal-length earlier window. Also returns the independent current view state. |
-| `get_deployments` | Reads chronological deployment history in UTC by day. |
-| `set_dashboard_view` | Updates dates, segment, and optional highlight in one operation. Requires the current `expectedStateVersion`. |
+| `get_deployments`       | Reads chronological deployment history in UTC by day.                                                                                                                                     |
+| `set_dashboard_view`    | Updates dates, segment, and optional highlight in one operation. Requires the current `expectedStateVersion`.                                                                             |
 
 The `booking-conversion-chart` and `booking-funnel-chart` cards each expose six fields through `oai-annotation-metadata`. Metadata describes the card state when it was selected. Before changing filters, the agent reads `currentView`. On `STALE_VIEW`, it can read the view again and account for newer user selections.
 
-Tools are declared with Angular's experimental `declareExperimentalWebMcpTool` API. Angular unregisters them when the injector scoped to the dashboard mount is destroyed. Tool calls are logged locally in memory; the host manages annotation comments. See the [WebMCP specification](https://webmachinelearning.github.io/webmcp/).
+Tools are declared with Angular's experimental `provideExperimentalWebMcpTools` route provider. `withAutoCleanupInjectors()` unregisters them when the dashboard route injector is destroyed. Tool calls are logged locally in memory; the host manages annotation comments. See the [WebMCP specification](https://webmachinelearning.github.io/webmcp/).
 
 ## Verification
 
-- **Automated.** Vitest covers validation of 80 cohorts, aggregation results and both funnel drops, complete baselines, state atomicity and versioning, rendered metadata, and reset behavior. Adapter tests use a host stub to check execution schemas and unregistration.
+- **Automated.** Vitest covers validation of 80 cohorts, aggregation results and both funnel drops, complete baselines, state atomicity and versioning, rendered metadata, and reset behavior. Route-provider tests use a host stub to check execution schemas and unregistration.
 - **ChatGPT built-in browser.** Three live tools were discovered and called on localhost. Reads preserved the view version. A write changed all cards to Mobile Safari and highlighted Fare selector v2. A write using an older version returned `STALE_VIEW`. The **Activity** panel showed executed calls. Date range changes, keyboard behavior, reset, and a 375 px layout were also checked.
 - **Host annotations.** `document.oai.annotation.request` was available; the chart button accepted a request, and all six metadata fields refreshed after a view change. The native editor was outside automation access. Manual verification should cover selecting either card, canceling, sending an annotated comment, and receiving a model response in the conversation.
 - **Chrome.** The dashboard and filters worked without the annotation API. The annotation button was hidden, and the console showed no warnings or errors. The tested Chrome instance exposed WebMCP. A component test also checks rendering when both APIs are unavailable.
